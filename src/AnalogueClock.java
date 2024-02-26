@@ -36,6 +36,14 @@ public class AnalogueClock extends JFrame {
 
     private double halfHeight;
 
+    /**
+     * Creates a new AnalogueClock. It may use the current system time
+     * as a starting point or not. This is defined by the parameter
+     * {@code useCurrentSystemTime}.
+     * 
+     * @param useCurrentSystemTime whether this clock will use the current
+     * system time or not.
+     */
     public AnalogueClock(boolean useCurrentSystemTime) {
         this.secondsHand = new Point2D.Double();
         this.hoursHand = new Point2D.Double();
@@ -79,6 +87,10 @@ public class AnalogueClock extends JFrame {
         this.timer.start();
     }
 
+    /**
+     * Generates this Frame's menu bar.
+     * @return the menu bar.
+     */
     private JMenuBar generateMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("File");
@@ -116,6 +128,16 @@ public class AnalogueClock extends JFrame {
         return menuBar;
     }
 
+    /**
+     * Updates the clock, rotating its heads so they point to the
+     * correct parts of the clock, indicating the correct time.
+     * The result depends on the number of seconds
+     * passed since the initialization of this AnalogueClock.
+     * <p>
+     * The starting
+     * state of the clock may vary depending on whether this AnalogueClock
+     * uses the current system time or not.
+     */
     public void updateClock() {
         resetClock();
         double secondsAngle = second * ROTATION_ANGLE;
@@ -130,6 +152,9 @@ public class AnalogueClock extends JFrame {
         rotateHeads(secondsAngle, minutesAngle, hoursAngle);
     }
 
+    /**
+     * Resets the heads positions, making them all point at 12 o'clock.
+     */
     public void resetClock() {
         secondsHand.x = 0;
         secondsHand.y = halfHeight;
@@ -141,14 +166,21 @@ public class AnalogueClock extends JFrame {
         minutesHand.y = halfHeight - 15;
     }
 
-    // how much to rotate the heads related to where they're currently pointing at.
-    private void rotateHeads(double rotateSec, double rotateMin, double rotateHour) {
+    /**
+     * Rotates the heads through their respective angles (in radians) in relation to
+     * their current position on the clock.
+     * 
+     * @param secondsHeadAngle angle through which the second head will be rotated.
+     * @param minutesHeadAngle angle through which the minute head will be rotated.
+     * @param hoursHeadAngle angle through which the hour head will be rotated.
+     */
+    private void rotateHeads(double secondsHeadAngle, double minutesHeadAngle, double hoursHeadAngle) {
         double x, y;
         double sin, cos;
 
         // seconds hand
-        sin = Math.sin(rotateSec);
-        cos = Math.cos(rotateSec);
+        sin = Math.sin(secondsHeadAngle);
+        cos = Math.cos(secondsHeadAngle);
 
         x = secondsHand.x*cos - secondsHand.y*sin;
         y = secondsHand.x*sin + secondsHand.y*cos;
@@ -157,8 +189,8 @@ public class AnalogueClock extends JFrame {
         secondsHand.y = y;
 
         // minutes hand
-        sin = Math.sin(rotateMin);
-        cos = Math.cos(rotateMin);
+        sin = Math.sin(minutesHeadAngle);
+        cos = Math.cos(minutesHeadAngle);
 
         x = minutesHand.x*cos - minutesHand.y*sin;
         y = minutesHand.x*sin + minutesHand.y*cos;
@@ -167,8 +199,8 @@ public class AnalogueClock extends JFrame {
         minutesHand.y = y;
 
         // hours hand
-        sin = Math.sin(rotateHour);
-        cos = Math.cos(rotateHour);
+        sin = Math.sin(hoursHeadAngle);
+        cos = Math.cos(hoursHeadAngle);
 
         x = hoursHand.x*cos - hoursHand.y*sin;
         y = hoursHand.x*sin + hoursHand.y*cos;
@@ -177,6 +209,11 @@ public class AnalogueClock extends JFrame {
         hoursHand.y = y;
     }
 
+    /**
+     * Generates the this frame's main JPanel and defined how the clock
+     * should be rendered on screen.
+     * @return the main JPanel.
+     */
     private JPanel generateMainPanel() {
         JPanel panel = new JPanel() {
             @Override
