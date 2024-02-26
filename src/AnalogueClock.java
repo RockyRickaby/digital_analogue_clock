@@ -1,15 +1,18 @@
 import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.time.LocalDateTime;
@@ -27,6 +30,7 @@ public class AnalogueClock extends JFrame {
 
     private Timer timer;
     private int seconds;
+    private boolean showDigitalClock, digitalClockIs24h, smoothRotationsEnabled;
     // to use with the updateClock method
     private int second, minute, hour;
 
@@ -37,9 +41,13 @@ public class AnalogueClock extends JFrame {
         this.hoursHand = new Point2D.Double();
         this.minutesHand = new Point2D.Double();
         this.clockMiddle = new Point2D.Double();
-
+        
         this.halfHeight = -182;
-        this.seconds = 43150;
+        this.seconds = 0;
+        this.showDigitalClock = false;
+        this.digitalClockIs24h = false;
+        this.smoothRotationsEnabled = true;
+        
         if (useCurrentSystemTime) {
             LocalDateTime currTime = LocalDateTime.now();
             seconds = currTime.getSecond() + 60*currTime.getMinute() + 3600*currTime.getHour();
@@ -50,7 +58,7 @@ public class AnalogueClock extends JFrame {
         this.hour = seconds / 3600 % 24;
 
         this.timer = new Timer(1000, e -> {
-            seconds = (seconds + 1) % 43200;
+            seconds = (seconds + 1) % 86400;
 
             second = seconds % 60;
             minute = seconds / 60 % 60;
@@ -62,19 +70,64 @@ public class AnalogueClock extends JFrame {
         this.setBackground(Color.WHITE);
         this.setTitle("Clock");
         this.add(generateMainPanel());
-        // this.setJMenuBar(generateMenuBar());
+        this.setJMenuBar(generateMenuBar());
         this.setDefaultCloseOperation(EXIT_ON_CLOSE);
-        this.setSize(600, 623);
+        this.setSize(600, 646);
         this.setLocationRelativeTo(null);
         this.setVisible(true);
         // 584x584
         this.timer.start();
     }
 
+    private JMenuBar generateMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+        JMenu menu = new JMenu("File");
+        JMenuItem item = new JMenuItem("Toggle digital clock");
+        item.addActionListener(e-> {
+            this.showDigitalClock = !this.showDigitalClock;
+            repaint();
+        });
+        menu.add(item);
+        
+        item = new JMenuItem("Toggle 24 hour clock");
+        item.addActionListener(e-> {
+            if (!this.showDigitalClock) {
+                return;
+            }
+            this.digitalClockIs24h = !this.digitalClockIs24h;
+            repaint();
+        });
+        menu.add(item);
+        
+        item = new JMenuItem("Toggle smooth head rotations");
+        item.addActionListener(e-> {
+            this.smoothRotationsEnabled = !this.smoothRotationsEnabled;
+            updateClock();
+            repaint();
+        });
+        menu.add(item);
+        menu.addSeparator();
+
+        item = new JMenuItem("Exit");
+        item.addActionListener(e -> System.exit(0));
+        menu.add(item);
+
+        menuBar.add(menu);
+        return menuBar;
+    }
+
     public void updateClock() {
         resetClock();
-        //rotateHeads(second, minute, hour);
-        rotateHeads(second, seconds, seconds);
+        double secondsAngle = second * ROTATION_ANGLE;
+        double minutesAngle = minute * ROTATION_ANGLE;
+        double hoursAngle = hour * HOUR_ANGLE;
+
+        if (smoothRotationsEnabled) {
+            minutesAngle = seconds * SMOOTH_ROTATION_ANGLE_MINUTE;
+            hoursAngle = seconds * SMOOTH_ROTATION_ANGLE_HOUR;
+        }
+
+        rotateHeads(secondsAngle, minutesAngle, hoursAngle);
     }
 
     public void resetClock() {
@@ -89,20 +142,13 @@ public class AnalogueClock extends JFrame {
     }
 
     // how much to rotate the heads related to where they're currently pointing at.
-    private void rotateHeads(int rotateSec, int rotateMin, int rotateHour) {
-        double secondsAngle = rotateSec * ROTATION_ANGLE;
-        // double minutesAngle = rotateMin * ROTATION_ANGLE;
-        // double hoursAngle = rotateHour * HOUR_ANGLE;
-
-        double minutesAngle = rotateMin*SMOOTH_ROTATION_ANGLE_MINUTE;
-        double hoursAngle = rotateHour*SMOOTH_ROTATION_ANGLE_HOUR;
-
+    private void rotateHeads(double rotateSec, double rotateMin, double rotateHour) {
         double x, y;
         double sin, cos;
 
         // seconds hand
-        sin = Math.sin(secondsAngle);
-        cos = Math.cos(secondsAngle);
+        sin = Math.sin(rotateSec);
+        cos = Math.cos(rotateSec);
 
         x = secondsHand.x*cos - secondsHand.y*sin;
         y = secondsHand.x*sin + secondsHand.y*cos;
@@ -111,8 +157,8 @@ public class AnalogueClock extends JFrame {
         secondsHand.y = y;
 
         // minutes hand
-        sin = Math.sin(minutesAngle);
-        cos = Math.cos(minutesAngle);
+        sin = Math.sin(rotateMin);
+        cos = Math.cos(rotateMin);
 
         x = minutesHand.x*cos - minutesHand.y*sin;
         y = minutesHand.x*sin + minutesHand.y*cos;
@@ -121,8 +167,8 @@ public class AnalogueClock extends JFrame {
         minutesHand.y = y;
 
         // hours hand
-        sin = Math.sin(hoursAngle);
-        cos = Math.cos(hoursAngle);
+        sin = Math.sin(rotateHour);
+        cos = Math.cos(rotateHour);
 
         x = hoursHand.x*cos - hoursHand.y*sin;
         y = hoursHand.x*sin + hoursHand.y*cos;
@@ -131,7 +177,7 @@ public class AnalogueClock extends JFrame {
         hoursHand.y = y;
     }
 
-    public JPanel generateMainPanel() {
+    private JPanel generateMainPanel() {
         JPanel panel = new JPanel() {
             @Override
             public void paintComponent(Graphics g) {
@@ -143,18 +189,27 @@ public class AnalogueClock extends JFrame {
 
                 g2.translate(widthHalf, heightHalf);
 
+                if (showDigitalClock) {
+                    g2.setFont(new Font("Arial", Font.BOLD, 32));
+                    int x = -40, y = 76;
+                    if (!digitalClockIs24h) {
+                        x = -64;
+                    }
+                    g2.drawString(DigitalClockString.toString(hour, minute, digitalClockIs24h), x, y);
+                }
+
                 Point2D.Double hourTick = new Point2D.Double(0, -heightHalf + 30);
                 Point2D.Double hourTick2 = new Point2D.Double(0, -heightHalf + 40);
 
                 g2.setColor(Color.BLACK);
 
                 // clock's midpoint. just a reference point.
-                g2.draw(new Ellipse2D.Double(-2, -2, 4, 4));
+                // g2.draw(new Ellipse2D.Double(-2, -2, 4, 4));
 
-                g2.setStroke(new BasicStroke(6));
+                g2.setStroke(new BasicStroke(7));
                 g2.draw(new Line2D.Double(clockMiddle, hoursHand));
 
-                g2.setStroke(new BasicStroke(4));
+                g2.setStroke(new BasicStroke(5));
                 g2.draw(new Line2D.Double(clockMiddle, minutesHand));
 
                 g2.setColor(Color.RED);
@@ -168,9 +223,8 @@ public class AnalogueClock extends JFrame {
 
                 g2.setColor(Color.BLACK);
                 g2.setStroke(quarterStroke);
-                g2.draw(new Line2D.Double(hourTick, hourTick2));
 
-                for (int i = 0; i < 60; i++) {
+                for (int i = 0; i <= 60; i++) {
                     double angle = i*ROTATION_ANGLE;
                     if (i >= 15 && i % 15 == 0) {
                         g2.setStroke(quarterStroke);
@@ -189,6 +243,7 @@ public class AnalogueClock extends JFrame {
                     double y2 = hourTick2.x*sin + hourTick2.y*cos;
 
                     g2.draw(new Line2D.Double(x1, y1, x2, y2));
+                    
                 }
             }
         };
@@ -196,9 +251,7 @@ public class AnalogueClock extends JFrame {
             @Override
             public void componentResized(ComponentEvent e) {
                 halfHeight = (double) -getHeight() / 2 + 110;
-                resetClock();
-                //rotateHeads(second, minute, hour);
-                rotateHeads(second, seconds, seconds);
+                updateClock();
             }
         });
         return panel;
